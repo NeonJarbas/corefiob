@@ -58,6 +58,7 @@ class TestHeuristicParser(unittest.TestCase):
         )
 
     def test_of(self):
+        # NOUN of NOUN
         self.assertEqual(solver.iob_tag("Korgoth of Barbaria is here, He is a savage!"),
                          [('Korgoth', 'PROPN', 'B-ENTITY-MALE'),
                           ('of', 'ADP', 'I-ENTITY-MALE'),
@@ -70,6 +71,8 @@ class TestHeuristicParser(unittest.TestCase):
                           ('a', 'DET', 'O'),
                           ('savage', 'NOUN', 'O'),
                           ('!', 'PUNCT', 'O')])
+
+        # NOUN the NOUN of NOUN
         self.assertEqual(solver.iob_tag("This is Conan the Barbarian of Hyperborea! He is a savage but he is noble"),
                          [('This', 'DET', 'O'),
                           ('is', 'AUX', 'O'),
@@ -251,6 +254,22 @@ class TestHeuristicParser(unittest.TestCase):
              ('stand', 'VERB', 'O'),
              ('for', 'ADP', 'O'),
              ('peace', 'NOUN', 'O')])
+
+    def test_neutral(self):
+        self.assertEqual(solver.iob_tag(
+            "A majority of the nation said they are in favor of democracy"),
+            [('A', 'DET', 'B-ENTITY-NEUTRAL'),
+             ('majority', 'NOUN', 'I-ENTITY-NEUTRAL'),
+             ('of', 'ADP', 'I-ENTITY-NEUTRAL'),
+             ('the', 'DET', 'I-ENTITY-NEUTRAL'),
+             ('nation', 'NOUN', 'I-ENTITY-NEUTRAL'),
+             ('said', 'VERB', 'O'),
+             ('they', 'PRON', 'B-COREF-NEUTRAL'),
+             ('are', 'AUX', 'O'),
+             ('in', 'ADP', 'O'),
+             ('favor', 'NOUN', 'O'),
+             ('of', 'ADP', 'O'),
+             ('democracy', 'NOUN', 'O')])
 
     def test_multiple_corefs(self):
         # plural + inanimate
