@@ -76,6 +76,9 @@ class HeuristicParser(DummyParser):
         prons = {}
         ents = {}
 
+        valid_helper_tags = ["ADJ", "DET", "NUM"]
+        valid_noun_tags = ["NOUN", "PROPN"]
+
         # first pass - tag entities
         # print("### FIRST PASS - entity candidates")
         def tag_entities():
@@ -90,12 +93,21 @@ class HeuristicParser(DummyParser):
                 prev2 = iob[idx - 2] if idx > 1 else ("", "", "")
                 nxt = iob[idx + 1] if idx + 1 < len(iob) else ("", "", "")
 
+                is_noun = tag in valid_noun_tags and prev[0] not in self.JOINER_TOKENS
                 # plurals of the format NOUN and NOUN
                 is_conjunction = token in self.JOINER_TOKENS and \
-                                 prev[1] in ["NOUN", "PROPN"] and \
-                                 nxt[1] in ["NOUN", "PROPN"]
-                is_noun = tag in ["NOUN", "PROPN"] and prev[0] not in self.JOINER_TOKENS
-                if is_conjunction:
+                                 prev[1] in valid_noun_tags and \
+                                 nxt[1] in valid_noun_tags
+                # nouns of the form "NOUN of NOUN" or "NOUN of the ADJ NOUN"
+                is_adp = tag == "ADP" and "ENTITY" in prev[2] and nxt[1] in valid_noun_tags
+
+                if is_adp:
+                    newtag = prev[2].replace("B-", "I-")
+                    iob[idx] = (token, tag, newtag)
+                    iob[idx + 1] = (nxt[0], nxt[1], newtag)
+                    ents[idx] = ents[idx + 1] = newtag
+
+                elif is_conjunction:
                     iob[idx - 1] = (prev[0], prev[1], CorefIOB.ENTITY_PLURAL)
                     iob[idx] = (token, tag, CorefIOB.ENTITY_PLURAL_I)
                     iob[idx + 1] = (nxt[0], nxt[1], CorefIOB.ENTITY_PLURAL_I)
@@ -113,7 +125,7 @@ class HeuristicParser(DummyParser):
                         continue
 
                     # include adjectives and determinants
-                    if prev[1] == "ADJ" or prev[1] == "DET" or \
+                    if prev[1] in valid_helper_tags or \
                             prev[0].lower() in self.PREV_TOKENS:
                         first = False
 
@@ -142,7 +154,7 @@ class HeuristicParser(DummyParser):
                         if first:
                             iob[idx] = (token, tag, CorefIOB.ENTITY_INANIMATE)
                             ents[idx] = CorefIOB.ENTITY_INANIMATE
-                        elif prev2[1] == "ADJ" or prev2[1] == "DET":
+                        elif prev2[1] in valid_helper_tags:
                             iob[idx - 2] = (prev2[0], prev2[1], CorefIOB.ENTITY_INANIMATE)
                             iob[idx - 1] = (prev[0], prev[1], CorefIOB.ENTITY_INANIMATE_I)
                             iob[idx] = (token, tag, CorefIOB.ENTITY_INANIMATE_I)
@@ -173,7 +185,7 @@ class HeuristicParser(DummyParser):
                         if first:
                             iob[idx] = (token, tag, CorefIOB.ENTITY_NEUTRAL)
                             ents[idx] = CorefIOB.ENTITY_NEUTRAL
-                        elif prev2[1] == "ADJ" or prev2[1] == "DET":
+                        elif prev2[1] in valid_helper_tags:
                             iob[idx - 2] = (prev2[0], prev2[1], CorefIOB.ENTITY_NEUTRAL)
                             iob[idx - 1] = (prev[0], prev[1], CorefIOB.ENTITY_NEUTRAL_I)
                             iob[idx] = (token, tag, CorefIOB.ENTITY_NEUTRAL_I)
@@ -239,7 +251,7 @@ class HeuristicParser(DummyParser):
                 male_corefs = {k: t for k, t in possible_coref.items() if t.endswith("-MALE")}
 
                 # disambiguate neutral
-                if tag.endswith("ENTITY-NEUTRAL") and ptag in ["PROPN", "NOUN"]:
+                if tag.endswith("ENTITY-NEUTRAL") and ptag in valid_noun_tags:
                     is_human = clean_token in self.HUMAN_TOKENS or ptag in ["PROPN"]
 
                     # disambiguate neutral/inanimate
@@ -247,7 +259,7 @@ class HeuristicParser(DummyParser):
                         if tag.startswith("I-") or prevtag in [tag, CorefIOB.ENTITY_INANIMATE,
                                                                CorefIOB.ENTITY_INANIMATE_I]:
                             tag = CorefIOB.ENTITY_INANIMATE_I
-                            if prev2[1] == "ADJ" or prev2[1] == "DET":
+                            if prev2[1] in valid_helper_tags:
                                 iob[ent - 2] = (prev2[0], prev2[1], CorefIOB.ENTITY_INANIMATE)
                                 iob[ent - 1] = (prevtoken, prevptag, CorefIOB.ENTITY_INANIMATE_I)
                                 ents[ent - 2] = CorefIOB.ENTITY_INANIMATE
@@ -286,6 +298,13 @@ class HeuristicParser(DummyParser):
                             iob[ent] = (token, ptag, tag)
                             ents[ent] = tag
                             # print("  - replacing NEUTRAL -> FEMALE ", iob[ent])
+
+                    if (prevptag in valid_helper_tags or prevptag == "ADP") and \
+                            (prev2[1] in valid_helper_tags or prev2[1] in valid_noun_tags):
+                        iob[ent - 1] = (prevtoken, prevptag, tag.replace("B-", "I-"))
+                        ents[ent - 1] = tag.replace("B-", "I-")
+                        iob[ent] = (token, ptag, tag.replace("B-", "I-"))
+                        ents[ent] = tag.replace("B-", "I-")
 
         disambiguate()
 

@@ -37,7 +37,7 @@ class TestHeuristicParser(unittest.TestCase):
                           ('my', 'PRON', 'O'),
                           ('life', 'NOUN', 'O')])
 
-        # test 3 words joined and cast to male (only coref)
+        # test 3 noun words joined and cast to male (only present coref gender)
         self.assertEqual(solver.iob_tag(
             "George von Doomson is the best. His ideas are unique compared to Joe's"),
             [('George', 'PROPN', 'B-ENTITY-MALE'),
@@ -56,6 +56,37 @@ class TestHeuristicParser(unittest.TestCase):
              ('Joe', 'PROPN', 'O'),
              ("'s", 'PART', 'O')]
         )
+
+    def test_of(self):
+        self.assertEqual(solver.iob_tag("Korgoth of Barbaria is here, He is a savage!"),
+                         [('Korgoth', 'PROPN', 'B-ENTITY-MALE'),
+                          ('of', 'ADP', 'I-ENTITY-MALE'),
+                          ('Barbaria', 'PROPN', 'I-ENTITY-MALE'),
+                          ('is', 'AUX', 'O'),
+                          ('here', 'ADV', 'O'),
+                          (',', 'PUNCT', 'O'),
+                          ('He', 'PRON', 'B-COREF-MALE'),
+                          ('is', 'AUX', 'O'),
+                          ('a', 'DET', 'O'),
+                          ('savage', 'NOUN', 'O'),
+                          ('!', 'PUNCT', 'O')])
+        self.assertEqual(solver.iob_tag("This is Conan the Barbarian of Hyperborea! He is a savage but he is noble"),
+                         [('This', 'DET', 'O'),
+                          ('is', 'AUX', 'O'),
+                          ('Conan', 'PROPN', 'B-ENTITY-MALE'),
+                          ('the', 'DET', 'I-ENTITY-MALE'),
+                          ('Barbarian', 'PROPN', 'I-ENTITY-MALE'),
+                          ('of', 'ADP', 'I-ENTITY-MALE'),
+                          ('Hyperborea', 'PROPN', 'I-ENTITY-MALE'),
+                          ('!', 'PUNCT', 'O'),
+                          ('He', 'PRON', 'B-COREF-MALE'),
+                          ('is', 'AUX', 'O'),
+                          ('a', 'DET', 'O'),
+                          ('savage', 'NOUN', 'O'),
+                          ('but', 'CCONJ', 'O'),
+                          ('he', 'PRON', 'B-COREF-MALE'),
+                          ('is', 'VERB', 'O'),
+                          ('noble', 'ADJ', 'O')])
 
     def test_neutral2inanimate(self):
         # "it" makes entities inanimate instead of neutral
@@ -94,7 +125,7 @@ class TestHeuristicParser(unittest.TestCase):
         self.assertEqual(solver.iob_tag("I have many dogs, I love them"),
                          [('I', 'PRON', 'O'),
                           ('have', 'VERB', 'O'),
-                          ('many', 'ADJ',  'B-ENTITY-INANIMATE'),
+                          ('many', 'ADJ', 'B-ENTITY-INANIMATE'),
                           ('dogs', 'NOUN', 'I-ENTITY-INANIMATE'),
                           (',', 'PUNCT', 'O'),
                           ('I', 'PRON', 'O'),
