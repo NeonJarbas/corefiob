@@ -6,6 +6,49 @@ solver = HeuristicParser()
 
 
 class TestHeuristicParser(unittest.TestCase):
+    def test_replace(self):
+        self.assertEqual(solver.replace_corefs("The girl said she would take the trash out"),
+                         "The girl said The girl would take the trash out")
+        self.assertEqual(solver.replace_corefs("I have many friends. They are an important part of my life"),
+                         "I have many friends. many friends are an important part of my life")
+        self.assertEqual(
+            solver.replace_corefs("George von Doomson is the best. His ideas are unique compared to Joe's"),
+            "George von Doomson is the best. George von Doomson ideas are unique compared to Joe's")
+        self.assertEqual(solver.replace_corefs("Korgoth of Barbaria is here, He is a savage!"),
+                         "Korgoth of Barbaria is here, Korgoth of Barbaria is a savage!")
+        self.assertEqual(
+            solver.replace_corefs("This is Conan the Barbarian of Hyperborea! He is a savage but he is noble"),
+            "This is Conan the Barbarian of Hyperborea! Conan the Barbarian of Hyperborea is a savage but Conan the Barbarian of Hyperborea is noble")
+        self.assertEqual(solver.replace_corefs("Here is the book now take it"),
+                         "Here is the book now take the book")
+        self.assertEqual(solver.replace_corefs("Here is the awesome machine now take it"),
+                         "Here is the awesome machine now take the awesome machine")
+        self.assertEqual(solver.replace_corefs("Turn on the lights and make them blue"),
+                         "Turn on the lights and make the lights blue")
+        self.assertEqual(solver.replace_corefs("I have many dogs, I love them"),
+                         "I have many dogs, I love many dogs")
+        self.assertEqual(solver.replace_corefs("My neighbors have a cat. It has a bushy tail"),
+                         "My neighbors have a cat. a cat has a bushy tail")
+        self.assertEqual(solver.replace_corefs("The coin was too far away for the woman to reach it"),
+                         "The coin was too far away for the woman to reach The coin")
+        self.assertEqual(solver.replace_corefs("The sign was too far away for the boy to read it"),
+                         "The sign was too far away for the boy to read The sign")
+        self.assertEqual(solver.replace_corefs("Dog is man's best friend. It is always loyal"),
+                         "Dog is man's best friend. Dog is always loyal")
+        self.assertEqual(solver.replace_corefs(
+            "I voted for Bob because he is clear about his values. His ideas represent a majority of the nation. He is better than Alice"),
+                         "I voted for Bob because Bob is clear about Bob values. Bob ideas represent a majority of the nation. Bob is better than Alice")
+        self.assertEqual(solver.replace_corefs(
+            "Jack Glass is one of the top candidates in the elections. His ideas are unique compared to Joe's"),
+                         "Jack Glass is one of the top candidates in the elections. Jack Glass ideas are unique compared to Joe's")
+        self.assertEqual(solver.replace_corefs("Leaders around the world say they stand for peace"),
+                         "Leaders around the world say Leaders stand for peace")
+        self.assertEqual(solver.replace_corefs("A majority of the nation said they are in favor of democracy"),
+                         "A majority of the nation said A majority of the nation are in favor of democracy")
+        self.assertEqual(solver.replace_corefs("My neighbours just adopted a puppy. They care for it like a baby"),
+                         "My neighbours just adopted a puppy. My neighbours care for a puppy like a baby")
+        self.assertEqual(solver.replace_corefs("Members voted for John because they see him as a good leader"),
+                         "Members voted for John because Members see John as a good leader")
 
     def test_gender(self):
         # test implicit gender word list
@@ -20,7 +63,6 @@ class TestHeuristicParser(unittest.TestCase):
                           ('the', 'DET', 'O'),
                           ('trash', 'NOUN', 'O'),
                           ('out', 'ADP', 'O')])
-
         # plural word
         self.assertEqual(solver.iob_tag("I have many friends. They are an important part of my life"),
                          [('I', 'PRON', 'O'),
@@ -36,7 +78,6 @@ class TestHeuristicParser(unittest.TestCase):
                           ('of', 'ADP', 'O'),
                           ('my', 'PRON', 'O'),
                           ('life', 'NOUN', 'O')])
-
         # test 3 noun words joined and cast to male (only present coref gender)
         self.assertEqual(solver.iob_tag(
             "George von Doomson is the best. His ideas are unique compared to Joe's"),

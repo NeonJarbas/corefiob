@@ -1,8 +1,8 @@
 from nltk import pos_tag
-from quebra_frases import word_tokenize
 import spacy
 import enum
 from corefiob.lang import *
+from spacy.tokens.doc import Doc
 
 # TODO this is WIP! postagger will be configurable as it is the most important piece of this pipeline
 nlp = spacy.load("en_core_web_sm")
@@ -39,13 +39,16 @@ class CorefIOB(str, enum.Enum):
 
 class DummyParser:
     def tokenize(self, sentence):
-        return word_tokenize(sentence)
+        if isinstance(sentence, str):
+            sentence = nlp(sentence)
+        if isinstance(sentence, Doc):
+            return [token.text for token in sentence]
 
     def pos_tag(self, tokens):
         if isinstance(tokens, str):
-            # tokens = self.tokenize(tokens)
-            doc = nlp(tokens)
-            return [(token.text, token.pos_) for token in doc]
+            tokens = nlp(tokens)
+        if isinstance(tokens, Doc):
+            return [(token.text, token.pos_) for token in tokens]
         return pos_tag(tokens, tagset="universal")
 
     def iob_tag(self, postagged_toks):
@@ -406,3 +409,57 @@ class HeuristicParser(DummyParser):
         iob, ents = self._filter_coref_mismatches(iob, ents, prons)
         iob = self._fix_iob_seqs(iob)
         return iob
+
+    def replace_corefs(self, sentence):
+        postagged_toks = self.pos_tag(sentence)
+        iob = self.iob_tag(postagged_toks)
+
+        female = ""
+        male = ""
+        neutral = ""
+        plural = ""
+        inanimate = ""
+
+        solved = []
+        # simple heuristic, choose the closest matching entity and coref
+        for idx, (tok, pos, tag) in enumerate(iob):
+            if tag == CorefIOB.ENTITY_FEMALE:
+                female = tok
+            elif tag == CorefIOB.ENTITY_FEMALE_I:
+                female = f"{female} {tok}"
+            elif tag == CorefIOB.ENTITY_MALE:
+                male = tok
+            elif tag == CorefIOB.ENTITY_MALE_I:
+                male = f"{male} {tok}"
+            elif tag == CorefIOB.ENTITY_NEUTRAL:
+                neutral = tok
+            elif tag == CorefIOB.ENTITY_NEUTRAL_I:
+                neutral = f"{neutral} {tok}"
+            elif tag == CorefIOB.ENTITY_INANIMATE:
+                inanimate = tok
+            elif tag == CorefIOB.ENTITY_INANIMATE_I:
+                inanimate = f"{inanimate} {tok}"
+            elif tag == CorefIOB.ENTITY_PLURAL:
+                plural = tok
+            elif tag == CorefIOB.ENTITY_PLURAL_I:
+                plural = f"{plural} {tok}"
+
+            if tag == CorefIOB.COREF_FEMALE and female:
+                solved.append(female)
+            elif tag == CorefIOB.COREF_MALE and male:
+                solved.append(male)
+            elif tag == CorefIOB.COREF_INANIMATE and inanimate:
+                solved.append(inanimate)
+            elif tag == CorefIOB.COREF_NEUTRAL and neutral:
+                solved.append(neutral)
+            elif tag == CorefIOB.COREF_PLURAL and plural:
+                solved.append(plural)
+            else:
+                solved.append(tok)
+
+        # TODO do this properly with non destructive tokenization
+        return " ".join(solved).\
+            replace(" . ", ". ").\
+            replace(" , ", ", ").\
+            replace(" 's", "'s").\
+            replace(" !", "!")
